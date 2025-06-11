@@ -1,6 +1,7 @@
 import express from 'express';
 import { scrapeCricketMatches } from './scraperone.js';
 import { scrapeFootballMatches } from './scrapertwo.js';
+require('dotenv').config();
 
 
 const app = express();
