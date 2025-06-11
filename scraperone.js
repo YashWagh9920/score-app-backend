@@ -1,18 +1,25 @@
 import puppeteer from 'puppeteer';
 
 export async function scrapeCricketMatches() {
-  
-   const browser = await puppeteer.launch({
+
+  const browser = await puppeteer.launch({
+    headless: "new", // Use new headless mode
     args: [
       "--disable-setuid-sandbox",
       "--no-sandbox",
+      "--disable-dev-shm-usage", // Crucial for Docker
+      "--disable-gpu",
       "--single-process",
       "--no-zygote",
+      "--disable-accelerated-2d-canvas",
+      "--disable-features=IsolateOrigins,site-per-process"
     ],
     executablePath:
       process.env.NODE_ENV === "production"
         ? process.env.PUPPETEER_EXECUTABLE_PATH
         : puppeteer.executablePath(),
+    ignoreHTTPSErrors: true
+
   });
   const page = await browser.newPage();
 
@@ -36,7 +43,7 @@ export async function scrapeCricketMatches() {
           title: matchEl.querySelector('.cb-lv-scr-mtch-hdr a')?.textContent.replace(/,/g, '').trim(),
           matchNumber: matchEl.querySelector('.text-gray')?.textContent.replace('&nbsp;', ' ').trim(),
           date: rawTimestamp ? new Date(parseInt(rawTimestamp)).toLocaleDateString('en-GB') : '',
-          time: rawTimestamp ? new Date(parseInt(rawTimestamp)).toLocaleTimeString('en-US', 
+          time: rawTimestamp ? new Date(parseInt(rawTimestamp)).toLocaleTimeString('en-US',
             { hour: 'numeric', minute: '2-digit', hour12: true }) : '',
           venue: matchEl.querySelector('.text-gray:last-child')?.textContent
             .replace(/at|Today|•|-/g, '')

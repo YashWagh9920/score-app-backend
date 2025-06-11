@@ -1,17 +1,24 @@
 import puppeteer from 'puppeteer';
 
 export async function scrapeFootballMatches() {
-   const browser = await puppeteer.launch({
+  const browser = await puppeteer.launch({
+    headless: "new", // Use new headless mode
     args: [
       "--disable-setuid-sandbox",
       "--no-sandbox",
+      "--disable-dev-shm-usage", // Crucial for Docker
+      "--disable-gpu",
       "--single-process",
       "--no-zygote",
+      "--disable-accelerated-2d-canvas",
+      "--disable-features=IsolateOrigins,site-per-process"
     ],
     executablePath:
       process.env.NODE_ENV === "production"
         ? process.env.PUPPETEER_EXECUTABLE_PATH
         : puppeteer.executablePath(),
+    ignoreHTTPSErrors: true
+
   });
   const page = await browser.newPage();
 
