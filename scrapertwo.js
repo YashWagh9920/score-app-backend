@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer';
 
 export async function scrapeFootballMatches() {
   const browser = await puppeteer.launch({
+     enableExtensions: true,
     headless: "new", // Use new headless mode
     args: [
       "--disable-setuid-sandbox",
