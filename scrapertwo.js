@@ -29,8 +29,17 @@ export async function scrapeFootballMatches() {
       timeout: 30000,
     });
 
-    await page.waitForSelector('.css-1ajdexg-MatchWrapper', { timeout: 15000 });
+    const hasMatchSelector = await page.$('.css-1ajdexg-MatchWrapper');
 
+    if (!hasMatchSelector) {
+      console.log('No ongoing football matches found.');
+      return [];
+    }
+
+    const matchCards = await page.$$('.css-1ajdexg-MatchWrapper');
+    if (matchCards.length === 0) {
+      return [];
+    }
     const matches = await page.evaluate(() => {
       const matchCards = Array.from(document.querySelectorAll('.css-1ajdexg-MatchWrapper'));
 
