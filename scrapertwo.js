@@ -1,7 +1,8 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer-core';
+import chromium from 'chromium'
 
 export async function scrapeFootballMatches() {
-  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath();
+  const executablePath = chromium.path;
   console.log('Using browser executable:', executablePath);
 
   const browser = await puppeteer.launch({
