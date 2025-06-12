@@ -1,26 +1,21 @@
 import puppeteer from 'puppeteer';
 
 export async function scrapeCricketMatches() {
+  const executablePath = process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath();
+  console.log('Using browser executable:', executablePath);
 
   const browser = await puppeteer.launch({
-     enableExtensions: true,
-    headless: "new", // Use new headless mode
+    headless: "new",
     args: [
-      "--disable-setuid-sandbox",
       "--no-sandbox",
-      "--disable-dev-shm-usage", // Crucial for Docker
-      "--disable-gpu",
-      "--single-process",
-      "--no-zygote",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
       "--disable-accelerated-2d-canvas",
-      "--disable-features=IsolateOrigins,site-per-process"
+      "--disable-gpu",
+      "--single-process"
     ],
-    executablePath:
-      process.env.NODE_ENV === "production"
-        ? process.env.PUPPETEER_EXECUTABLE_PATH
-        : puppeteer.executablePath(),
-    ignoreHTTPSErrors: true
-
+    executablePath,
+    timeout: 30000
   });
   const page = await browser.newPage();
 
