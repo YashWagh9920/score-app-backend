@@ -13,6 +13,7 @@ app.get('/cricket', async (req, res) => {
     const matches = await scrapeCricketMatches();
     res.json(matches);
   } catch (error) {
+    console.error('Error fetching cricket matches:', error);
     res.status(500).json({ error: 'Failed to fetch cricket matches.' });
   }
 });
