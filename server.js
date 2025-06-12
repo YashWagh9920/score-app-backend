@@ -27,6 +27,10 @@ app.get('/football', async (req, res) => {
   }
 });
 
+app.get('/health', (req, res) => {
+  res.status(200).send('Server is healthy');
+});
+
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
 });
