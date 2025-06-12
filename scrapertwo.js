@@ -6,17 +6,13 @@ export async function scrapeFootballMatches() {
   console.log('Using browser executable:', executablePath);
 
   const browser = await puppeteer.launch({
-    headless: "new",
+    headless: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--disable-gpu",
-      "--single-process"
-    ],
+        ],
     executablePath,
-    timeout: 30000
+    timeout: 60000
   });
   const page = await browser.newPage();
 
@@ -26,8 +22,8 @@ export async function scrapeFootballMatches() {
 
   try {
     await page.goto('https://www.fotmob.com/?show=ongoing', {
-      waitUntil: 'networkidle2',
-      timeout: 30000,
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
     });
 
     const hasMatchSelector = await page.$('.css-1ajdexg-MatchWrapper');

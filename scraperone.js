@@ -6,17 +6,13 @@ export async function scrapeCricketMatches() {
   console.log('Using browser executable:', executablePath);
 
   const browser = await puppeteer.launch({
-    headless: "new",
+    headless: true,
     args: [
       "--no-sandbox",
       "--disable-setuid-sandbox",
-      "--disable-dev-shm-usage",
-      "--disable-accelerated-2d-canvas",
-      "--disable-gpu",
-      "--single-process"
     ],
     executablePath,
-    timeout: 30000
+    timeout: 60000
   });
   const page = await browser.newPage();
 
@@ -25,7 +21,7 @@ export async function scrapeCricketMatches() {
   );
 
   try {
-    await page.goto('https://www.cricbuzz.com/cricket-match/live-scores', { waitUntil: 'networkidle2' });
+    await page.goto('https://www.cricbuzz.com/cricket-match/live-scores', { waitUntil: 'domcontentloaded',  timeout: 60000});
 
     await page.waitForSelector('.cb-mtch-lst.cb-col.cb-col-100.cb-tms-itm', { timeout: 15000 });
 
