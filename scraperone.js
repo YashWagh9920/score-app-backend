@@ -1,9 +1,8 @@
 import puppeteer from 'puppeteer-core';
-import chromium from 'chromium'
+import chromium from 'chromium';
 
 export async function scrapeCricketMatches() {
   const executablePath = chromium.path;
-  console.log('Using browser executable:', executablePath);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -21,33 +20,135 @@ export async function scrapeCricketMatches() {
   );
 
   try {
-    await page.goto('https://www.cricbuzz.com/cricket-match/live-scores', { waitUntil: 'domcontentloaded',  timeout: 60000});
+    await page.goto('https://www.cricbuzz.com/cricket-match/live-scores', { 
+      waitUntil: 'networkidle2', 
+      timeout: 60000
+    });
 
-    await page.waitForSelector('.cb-mtch-lst.cb-col.cb-col-100.cb-tms-itm', { timeout: 15000 });
+    // Wait for the page to load completely
+    await page.waitForSelector('a[href^="/live-cricket-scores/"]', { timeout: 15000 });
 
     const matches = await page.evaluate(() => {
-      const matchElements = Array.from(document.querySelectorAll('.cb-mtch-lst.cb-col.cb-col-100.cb-tms-itm'));
+      // Get all elements that might contain match data
+      const allMatchElements = Array.from(document.querySelectorAll('a[href^="/live-cricket-scores/"]'));
+      
+      const validMatches = [];
 
-      return matchElements.map(matchEl => {
-        const timestampElement = matchEl.querySelector('[ng-bind*="1745676000000"]');
-        const rawTimestamp = timestampElement?.getAttribute('ng-bind')?.match(/\d+/)?.[0] || '';
+      allMatchElements.forEach(matchEl => {
+        try {
+          const title = matchEl.getAttribute('title') || matchEl.textContent || '';
+          
+          // Skip invalid entries
+          if (!title || 
+              title === 'Live Score' || 
+              title.length < 10 || 
+              title.includes('Scorecard') ||
+              title.includes('Full Commentary') ||
+              title.includes('News')) {
+            return;
+          }
 
-        return {
-          title: matchEl.querySelector('.cb-lv-scr-mtch-hdr a')?.textContent.replace(/,/g, '').trim(),
-          matchNumber: matchEl.querySelector('.text-gray')?.textContent.replace('&nbsp;', ' ').trim(),
-          date: rawTimestamp ? new Date(parseInt(rawTimestamp)).toLocaleDateString('en-GB') : '',
-          time: rawTimestamp ? new Date(parseInt(rawTimestamp)).toLocaleTimeString('en-US',
-            { hour: 'numeric', minute: '2-digit', hour12: true }) : '',
-          venue: matchEl.querySelector('.text-gray:last-child')?.textContent
-            .replace(/at|Today|•|-/g, '')
-            .trim(),
-          teams: Array.from(matchEl.querySelectorAll('.cb-hmscg-tm-nm')).map(team => ({
-            name: team.textContent.trim(),
-            score: team.nextElementSibling?.textContent.trim() || 'N/A'
-          })),
-          status: matchEl.querySelector('.cb-text-complete, .cb-text-inprogress')?.textContent.trim() || 'Live'
-        };
+          // Extract match info
+          const matchInfoElement = matchEl.querySelector('.flex.justify-between.items-center span.text-xs');
+          const matchInfo = matchInfoElement?.textContent?.trim() || '';
+          
+          // Extract teams - look for team containers specifically
+          const teamContainers = Array.from(matchEl.querySelectorAll('.flex.items-center.gap-2'));
+          const teams = [];
+          
+          teamContainers.forEach(container => {
+            // Get team name from the span after the flag
+            const teamNameSpan = container.querySelector('span:last-child');
+            const teamName = teamNameSpan?.textContent?.trim();
+            
+            if (teamName && teamName.length > 0) {
+              // Find the score in the next sibling element
+              let score = 'N/A';
+              const parentRow = container.closest('.flex.items-center.gap-4');
+              if (parentRow) {
+                const scoreElement = parentRow.querySelector('.font-medium, .wb\\:font-semibold, [class*="w-1/2"]');
+                const scoreText = scoreElement?.textContent?.trim();
+                if (scoreText && scoreText.length > 0 && scoreText.length < 30) {
+                  score = scoreText;
+                }
+              }
+              
+              teams.push({
+                name: teamName,
+                score: score
+              });
+            }
+          });
+
+          // Extract status from the last span
+          const statusElement = matchEl.querySelector('span:last-child');
+          let status = statusElement?.textContent?.trim() || '';
+          const statusText = status.toLowerCase();
+          
+          // Clean and categorize status
+          if (statusText.includes('match starts at')) {
+            status = 'Upcoming';
+          } else if (statusText.includes('won by')) {
+            status = 'Completed';
+          } else if (statusText.includes('won')) {
+            status = 'Completed';
+          } else if (statusText.includes('opt')) {
+            status = 'Toss';
+          } else if (statusText.includes('preview')) {
+            status = 'Preview';
+          } else if (statusText.includes('delay')) {
+            status = 'Delayed';
+          } else if (statusText.includes('live')) {
+            status = 'Live';
+          } else if (statusText.includes('complete')) {
+            status = 'Completed';
+          }
+
+          // Extract venue
+          let venue = '';
+          if (matchInfo.includes('•')) {
+            const parts = matchInfo.split('•');
+            if (parts.length > 1) {
+              venue = parts.slice(1).join(' ').trim();
+            }
+          }
+
+          // Extract match number
+          let matchNumber = '';
+          if (matchInfo.includes('Match') || matchInfo.includes('T20I') || matchInfo.includes('ODI') || matchInfo.includes('Test')) {
+            matchNumber = matchInfo.split('•')[0]?.trim() || '';
+          }
+
+          // Only include matches that have at least one team
+          if (teams.length >= 1) {
+            validMatches.push({
+              title: title.replace(/ - [^-]*$/, '').trim(), // Remove trailing status from title
+              matchNumber: matchNumber,
+              date: '', // Will need separate extraction for date/time
+              time: '',
+              venue: venue,
+              teams: teams,
+              status: status
+            });
+          }
+        } catch (error) {
+          console.error('Error processing match element:', error);
+        }
       });
+
+      // Remove duplicates based on title
+      const uniqueMatches = [];
+      const seenTitles = new Set();
+      
+      validMatches.forEach(match => {
+        const simpleTitle = match.title.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+        if (!seenTitles.has(simpleTitle)) {
+          seenTitles.add(simpleTitle);
+          uniqueMatches.push(match);
+        }
+      });
+
+      return uniqueMatches;
     });
 
     return matches;
