@@ -2,7 +2,6 @@ import express from 'express';
 import { scrapeCricketMatches } from './scraperone.js';
 import { scrapeFootballMatches } from './scrapertwo.js';
 import { scrapeKabaddiMatches } from "./scrapethree.js";
-import { scrapeBadmintonMatches } from "./scrapefour.js";
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -56,32 +55,6 @@ app.get('/kabaddi', async (req, res) => {
   }
 });
 
-app.get('/badminton', async (req, res) => {
-  try {
-    const matches = await scrapeBadmintonMatches();
-    
-    if (matches.success) {
-      res.json({
-        success: true,
-        message: matches.message,
-        data: matches.data,
-        timestamp: new Date().toISOString()
-      });
-    } else {
-      res.status(500).json({
-        success: false,
-        error: matches.error,
-        data: matches.data
-      });
-    }
-  } catch (error) {
-    console.error('Error fetching badminton matches:', error);
-    res.status(500).json({ 
-      success: false,
-      error: 'Failed to fetch badminton matches.' 
-    });
-  }
-});
 
 app.get('/health', (req, res) => {
   res.status(200).send('Server is healthy');
